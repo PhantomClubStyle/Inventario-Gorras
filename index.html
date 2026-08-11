@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Inventario - Gorras</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: Arial, sans-serif;
+            padding: 15px;
+            margin: 0;
+        }
+        h2 { text-align: center; color: #fff; font-size: 22px; }
+        .form-container, .stats-container {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 500px;
+            margin: 0 auto 15px auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+        .stat-box {
+            background: #252525;
+            padding: 12px;
+            border-radius: 6px;
+        }
+        .stat-box h3 { margin: 0; font-size: 16px; color: #4CAF50; }
+        .stat-box p { margin: 5px 0 0; font-size: 11px; color: #aaa; }
+        .stat-inversion h3 { color: #ff9800; }
+        label { display: block; margin-top: 10px; font-size: 14px; color: #bbb; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover { background: #388e3c; }
+        .table-container {
+            max-width: 100%;
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 10px 10px; /* Altura cómoda y balanceada */
+            text-align: left;
+            border-bottom: 1px solid #2c2c2c;
+            white-space: nowrap;
+        }
+        th { background: #252525; color: #fff; font-size: 12px; }
+        .btn-action {
+            padding: 6px 8px;
+            margin-right: 3px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            color: white;
+            display: inline-block;
+        }
+        .btn-sell { background: #f57c00; }
+        .btn-sell:hover { background: #fb8c00; }
+        .btn-undo { background: #e65100; }
+        .btn-undo:hover { background: #f57c00; }
+        .btn-delete { background: #d32f2f; }
+        .btn-delete:hover { background: #e53935; }
+        .ganancia-text { color: #4CAF50; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>Control de Inventario - Gorras</h2>
+
+    <!-- Panel de Resumen -->
+    <div class="stats-container">
+        <div class="stat-box">
+            <h3 id="totalVentasReal">0.00</h3>
+            <p>Total USDT Ventas</p>
+        </div>
+        <div class="stat-box">
+            <h3 id="totalGananciaReal">0.00</h3>
+            <p>Ganancias Netas</p>
+        </div>
+        <div class="stat-box stat-inversion">
+            <h3 id="totalInversionReal">0.00</h3>
+            <p>Inversión Total (Costo)</p>
+        </div>
+        <div class="stat-box">
+            <h3 id="totalGorras">0</h3>
+            <p>En Stock</p>
+        </div>
+    </div>
+
+    <!-- Formulario para agregar gorras -->
+    <div class="form-container">
+        <form id="inventoryForm">
+            <label>Modelo / Nombre</label>
+            <input type="text" id="nombre" placeholder="Ej: DandyHats Sadboys" required>
+
+            <label>Stock / Cantidad</label>
+            <input type="number" id="stock" value="1" min="1" required>
+
+            <label>Costo de Compra Unitario (USDT)</label>
+            <input type="number" id="costo" step="0.01" placeholder="23" required>
+
+            <label>Precio Venta BCV (Informativo)</label>
+            <input type="text" id="precioBcv" placeholder="Ej: 44$ TASA BCV" required>
+
+            <button type="submit">Agregar Gorra</button>
+        </form>
+    </div>
+
+    <!-- Tabla de Inventario -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Stock</th>
+                    <th>Modelo</th>
+                    <th>Costo</th>
+                    <th>USDT Venta</th>
+                    <th>Precio BCV</th>
+                    <th>Ganancia Unit.</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaInventario">
+                <!-- Los datos se cargan dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let inventario = JSON.parse(localStorage.getItem('inventario_gorras_v8')) || [];
+        let totalVentasReal = parseFloat(localStorage.getItem('total_ventas_real_v8')) || 0;
+        let gananciaTotalReal = parseFloat(localStorage.getItem('ganancia_total_real_v8')) || 0;
+
+        const form = document.getElementById('inventoryForm');
+        const tabla = document.getElementById('tablaInventario');
+        const totalVentasRealEl = document.getElementById('totalVentasReal');
+        const totalGananciaRealEl = document.getElementById('totalGananciaReal');
+        const totalInversionRealEl = document.getElementById('totalInversionReal');
+        const totalGorrasEl = document.getElementById('totalGorras');
+
+        function guardarTodo() {
+            localStorage.setItem('inventario_gorras_v8', JSON.stringify(inventario));
+            localStorage.setItem('total_ventas_real_v8', totalVentasReal);
+            localStorage.setItem('ganancia_total_real_v8', gananciaTotalReal);
+            renderizar();
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const stock = parseInt(document.getElementById('stock').value);
+            const costo = parseFloat(document.getElementById('costo').value);
+
+            const nuevaGorra = {
+                id: Date.now(),
+                nombre: document.getElementById('nombre').value,
+                stock: stock,
+                costo: costo,
+                usdtVenta: 0,
+                precioBcv: document.getElementById('precioBcv').value,
+                gananciaUnitaria: 0,
+                estado: 'En Stock'
+            };
+
+            inventario.push(nuevaGorra);
+            form.reset();
+            document.getElementById('stock').value = 1;
+            guardarTodo();
+        });
+
+        function venderUnidad(id) {
+            const item = inventario.find(g => g.id === id);
+            if (item && item.stock > 0) {
+                let inputUsdt = prompt("¿Cuántos USDT compraste con la venta de esta gorra?", item.usdtVenta > 0 ? item.usdtVenta : "");
+                
+                if (inputUsdt === null) return;
+                
+                let usdtVentaReal = parseFloat(inputUsdt);
+                if (isNaN(usdtVentaReal)) {
+                    alert("Por favor ingresa un número válido de USDT.");
+                    return;
+                }
+
+                let gananciaVenta = usdtVentaReal - item.costo;
+
+                item.usdtVenta = usdtVentaReal;
+                item.gananciaUnitaria = gananciaVenta;
+                item.stock -= 1;
+                
+                totalVentasReal += usdtVentaReal;
+                gananciaTotalReal += gananciaVenta;
+
+                if (item.stock === 0) {
+                    item.estado = 'Agotado';
+                }
+                guardarTodo();
+            }
+        }
+
+        function revertirVenta(id) {
+            const item = inventario.find(g => g.id === id);
+            if (item) {
+                if (item.usdtVenta > 0) {
+                    totalVentasReal -= item.usdtVenta;
+                    if (totalVentasReal < 0) totalVentasReal = 0;
+
+                    gananciaTotalReal -= item.gananciaUnitaria;
+                    if (gananciaTotalReal < 0) gananciaTotalReal = 0;
+                }
+
+                item.stock += 1;
+                item.usdtVenta = 0;
+                item.gananciaUnitaria = 0;
+
+                if (item.estado === 'Agotado') {
+                    item.estado = 'En Stock';
+                }
+                guardarTodo();
+            }
+        }
+
+        function eliminarGorra(id) {
+            inventario = inventario.filter(g => g.id !== id);
+            guardarTodo();
+        }
+
+        function renderizar() {
+            tabla.innerHTML = '';
+            let sumaStock = 0;
+            let inversionTotalCalculada = 0; // Se calcula limpio directamente de lo que hay en stock
+
+            inventario.forEach(item => {
+                sumaStock += item.stock;
+                // La inversión total es la suma exacta de (costo * stock actual de cada gorra)
+                inversionTotalCalculada += (item.costo * item.stock);
+
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td><strong>${item.stock}</strong></td>
+                    <td><strong>${item.nombre}</strong></td>
+                    <td>${item.costo}</td>
+                    <td>${item.usdtVenta}</td>
+                    <td>${item.precioBcv}</td>
+                    <td class="ganancia-text">${item.usdtVenta > 0 ? '+' + item.gananciaUnitaria.toFixed(2) : '0.00'}</td>
+                    <td>${item.estado}</td>
+                    <td>
+                        <button class="btn-action btn-sell" onclick="venderUnidad(${item.id})">Vender 1</button>
+                        <button class="btn-action btn-undo" onclick="revertirVenta(${item.id})">Deshacer</button>
+                        <button class="btn-action btn-delete" onclick="eliminarGorra(${item.id})">Eliminar</button>
+                    </td>
+                `;
+                tabla.appendChild(fila);
+            });
+
+            totalVentasRealEl.textContent = `${totalVentasReal.toFixed(2)} USDT`;
+            totalGananciaRealEl.textContent = `${gananciaTotalReal.toFixed(2)} USDT`;
+            totalInversionRealEl.textContent = `${inversionTotalCalculada.toFixed(2)} USDT`;
+            totalGorrasEl.textContent = sumaStock;
+        }
+
+        renderizar();
+    </script>
+</body>
+</html>
