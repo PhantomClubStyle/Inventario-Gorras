@@ -13,7 +13,7 @@
             margin: 0;
         }
         h2 { text-align: center; color: #fff; font-size: 22px; }
-        .form-container, .stats-container {
+        .form-container, .stats-container, .backup-container {
             background: #1e1e1e;
             padding: 15px;
             border-radius: 8px;
@@ -65,6 +65,25 @@
             cursor: pointer;
         }
         button:hover { background: #388e3c; }
+        
+        .backup-container {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-backup {
+            background: #0288d1;
+            margin-top: 0;
+            font-size: 13px;
+        }
+        .btn-backup:hover { background: #039be5; }
+        .btn-restore {
+            background: #512da8;
+            margin-top: 0;
+            font-size: 13px;
+        }
+        .btn-restore:hover { background: #5e35b1; }
+        #importFile { display: none; }
+
         .table-container {
             max-width: 100%;
             overflow-x: auto;
@@ -133,6 +152,13 @@
         </div>
     </div>
 
+    <!-- Botones de Respaldo / Copia de Seguridad -->
+    <div class="backup-container">
+        <button class="btn-backup" onclick="exportarRespaldo()">📥 Exportar Datos</button>
+        <button class="btn-restore" onclick="document.getElementById('importFile').click()">📤 Importar Datos</button>
+        <input type="file" id="importFile" accept=".json" onchange="importarRespaldo(event)">
+    </div>
+
     <!-- Formulario para agregar lotes de gorras -->
     <div class="form-container">
         <form id="inventoryForm">
@@ -174,10 +200,10 @@
     </div>
 
     <script>
-        let inventario = JSON.parse(localStorage.getItem('inventario_gorras_v11')) || [];
-        let totalVentasReal = parseFloat(localStorage.getItem('total_ventas_real_v11')) || 0;
-        let gananciaTotalReal = parseFloat(localStorage.getItem('ganancia_total_real_v11')) || 0;
-        let totalInversionReal = parseFloat(localStorage.getItem('total_inversion_real_v11')) || 0;
+        let inventario = JSON.parse(localStorage.getItem('inventario_gorras_v12')) || [];
+        let totalVentasReal = parseFloat(localStorage.getItem('total_ventas_real_v12')) || 0;
+        let gananciaTotalReal = parseFloat(localStorage.getItem('ganancia_total_real_v12')) || 0;
+        let totalInversionReal = parseFloat(localStorage.getItem('total_inversion_real_v12')) || 0;
 
         const form = document.getElementById('inventoryForm');
         const tabla = document.getElementById('tablaInventario');
@@ -187,10 +213,10 @@
         const totalGorrasEl = document.getElementById('totalGorras');
 
         function guardarTodo() {
-            localStorage.setItem('inventario_gorras_v11', JSON.stringify(inventario));
-            localStorage.setItem('total_ventas_real_v11', totalVentasReal);
-            localStorage.setItem('ganancia_total_real_v11', gananciaTotalReal);
-            localStorage.setItem('total_inversion_real_v11', totalInversionReal);
+            localStorage.setItem('inventario_gorras_v12', JSON.stringify(inventario));
+            localStorage.setItem('total_ventas_real_v12', totalVentasReal);
+            localStorage.setItem('ganancia_total_real_v12', gananciaTotalReal);
+            localStorage.setItem('total_inversion_real_v12', totalInversionReal);
             renderizar();
         }
 
@@ -199,6 +225,48 @@
                 totalInversionReal = 0;
                 guardarTodo();
             }
+        }
+
+        function exportarRespaldo() {
+            const datos = {
+                inventario: inventario,
+                totalVentasReal: totalVentasReal,
+                gananciaTotalReal: gananciaTotalReal,
+                totalInversionReal: totalInversionReal
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(datos));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "respaldo_inventario_gorras.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importarRespaldo(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const contenido = JSON.parse(e.target.result);
+                    if (contenido.inventario && Array.isArray(contenido.inventario)) {
+                        inventario = contenido.inventario;
+                        totalVentasReal = contenido.totalVentasReal || 0;
+                        gananciaTotalReal = contenido.gananciaTotalReal || 0;
+                        totalInversionReal = contenido.totalInversionReal || 0;
+                        guardarTodo();
+                        alert("¡Datos importados y restaurados con éxito!");
+                    } else {
+                        alert("El archivo no tiene el formato correcto.");
+                    }
+                } catch (error) {
+                    alert("Hubo un error al leer el archivo de respaldo.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Limpiar input
         }
 
         form.addEventListener('submit', function(e) {
@@ -213,7 +281,6 @@
             const nuevaGorra = {
                 id: Date.now(),
                 nombre: document.getElementById('nombre').value,
-                stockOriginal: stock, // Guardamos stock inicial para control
                 stock: stock,
                 costo: costo,
                 usdtVenta: 0,
@@ -260,7 +327,6 @@
         function revertirVenta(id) {
             const item = inventario.find(g => g.id === id);
             if (item) {
-                // Validación estricta: solo permite revertir si se ha vendido al menos 1 unidad (es decir, el stock actual es menor al stock inicial con el que se creó el lote o tiene ventas registradas)
                 if (item.usdtVenta === 0 && item.estado === 'En Stock') {
                     alert("Este lote no tiene ventas registradas para deshacer.");
                     return;
