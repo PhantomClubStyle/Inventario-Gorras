@@ -125,8 +125,17 @@
         .btn-undo:hover { background: #e64a19; }
         .btn-delete { background: #c62828; }
         .btn-delete:hover { background: #d32f2f; }
-        .btn-edit-bcv { background: #00838f; padding: 4px 6px; font-size: 10px; margin-left: 5px; }
-        .btn-edit-bcv:hover { background: #00acc1; }
+        .btn-edit-bcv { 
+    background: #00838f; 
+    padding: 2px 6px !important;   /* Controla el tamaño interno */
+    width: auto !important;         /* Anula el 100% general */
+    display: inline-block !important; /* Se mantiene en línea con el texto */
+    font-size: 11px;                /* Tamaño del lápiz equilibrado */
+    margin-left: 6px; 
+    border-radius: 3px;     
+}
+.btn-edit-bcv:hover { background: #00acc1; }
+        
         .ganancia-text { color: #4CAF50; font-weight: bold; }
     </style>
 </head>
