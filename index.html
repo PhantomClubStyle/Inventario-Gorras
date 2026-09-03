@@ -125,6 +125,8 @@
         .btn-undo:hover { background: #e64a19; }
         .btn-delete { background: #c62828; }
         .btn-delete:hover { background: #d32f2f; }
+        .btn-edit-bcv { background: #00838f; padding: 4px 6px; font-size: 10px; margin-left: 5px; }
+        .btn-edit-bcv:hover { background: #00acc1; }
         .ganancia-text { color: #4CAF50; font-weight: bold; }
     </style>
 </head>
@@ -266,7 +268,7 @@
                 }
             };
             reader.readAsText(file);
-            event.target.value = ''; // Limpiar input
+            event.target.value = '';
         }
 
         form.addEventListener('submit', function(e) {
@@ -294,6 +296,17 @@
             document.getElementById('stock').value = 1;
             guardarTodo();
         });
+
+        function editarBcv(id) {
+            const item = inventario.find(g => g.id === id);
+            if (item) {
+                let nuevoPrecio = prompt("Actualizar Precio Venta BCV:", item.precioBcv);
+                if (nuevoPrecio !== null && nuevoPrecio.trim() !== "") {
+                    item.precioBcv = nuevoPrecio.trim();
+                    guardarTodo();
+                }
+            }
+        }
 
         function venderUnidad(id) {
             const item = inventario.find(g => g.id === id);
@@ -365,7 +378,10 @@
                     <td><strong>${item.nombre}</strong></td>
                     <td>${item.costo}</td>
                     <td>${item.usdtVenta}</td>
-                    <td>${item.precioBcv}</td>
+                    <td>
+                        ${item.precioBcv} 
+                        <button class="btn-action btn-edit-bcv" onclick="editarBcv(${item.id})" title="Editar Precio BCV">✏️</button>
+                    </td>
                     <td class="ganancia-text">${item.usdtVenta > 0 ? '+' + item.gananciaUnitaria.toFixed(2) : '0.00'}</td>
                     <td>${item.estado}</td>
                     <td>
